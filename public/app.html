@@ -62,10 +62,7 @@ div, svg {
 </head>
 <body>
 <div id="view" ng-app="ngdraw" ng-controller="whiteboard">
-<svg id="whiteboard" whiteboard
-  ng-mousedown="mousedown($event)"
-  ng-mouseup="mouseup($event)"
-  ng-mousemove="mousemove($event)">
+<svg id="whiteboard" whiteboard>
   <rect width="100" height="100" fill="red" x="50" y="50" stroke="black"
     stroke-width="10" />
   <rect width="100" height="100" fill="blue" x="50" y="200" />
@@ -89,18 +86,65 @@ div, svg {
 <script>
 var app = angular.module('ngdraw', []);
 
+function Point(x, y) {
+  if (x instanceof MouseEvent) {
+    this.x = x.offsetX;
+    this.y = x.offsetY;
+  } else if (x instanceof Point) {
+    this.x = x.x;
+    this.y = x.y;
+  } else {
+    this.x = x;
+    this.y = y;
+  }
+};
+Point.prototype.sub = function(p) {
+  this.x -= p.x;
+  this.y -= p.y;
+  return this;
+};
+Point.prototype.add = function(p) {
+  this.x += p.x;
+  this.y += p.y;
+  return this;
+};
+
 app.directive('whiteboard', function($window) {
   function link(scope, element, attrs) {
-    var p = element.parent()[0];
+    
+    // viewbox origin in svg coordinates
+    var origin = new Point(0, 0);
+    // mousedown device coordinates
+    var down_dev = null;
+    // mousedown svg coordinates
+    var down_svg
+
+    var parent = element.parent()[0];
     function setDimensions() {
-      var w = p.offsetWidth;
-      var h = p.offsetHeight;
+      var w = parent.offsetWidth;
+      var h = parent.offsetHeight;
       element.attr('width', w);
       element.attr('height', h);
-      element.attr('viewBox', '0 0 ' + w + ' ' + h);
+      element.attr('viewBox', origin.x + ' ' + origin.y + ' ' + w + ' ' + h);
     }
     angular.element($window).bind('resize', function() {
       setDimensions();
+    });
+    element.bind('mousedown', function($event) {
+      down_dev = new Point($event);
+      down_svg = new Point(origin);
+    });
+    element.bind('mousemove', function($event) {
+      if (down_dev && !scope.draw) {
+        var p = new Point($event);
+        var o = new Point(down_svg);
+        origin = o.sub(p.sub(down_dev));
+        setDimensions();
+      }
+    });
+    element.bind('mouseup', function($event) {
+      down_dev = null;
+      down_svg = null;
     });
     setDimensions();
   };
@@ -111,12 +155,16 @@ app.directive('whiteboard', function($window) {
 
 app.controller('whiteboard', function($scope, $window) {
   $scope.draw = false;
+  $scope.paths = [
+  ];
+
   $scope.mousedown = function($event) {
-    console.log($event);
   };
   $scope.mouseup = function($event) {
+    $scope.downat = null;
   };
   $scope.mousemove = function($event) {
+    
   };
   $scope.toggleDraw = function() {
   };
