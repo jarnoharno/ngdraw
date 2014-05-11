@@ -66,6 +66,16 @@ div, svg {
   <rect width="100" height="100" fill="red" x="50" y="50" stroke="black"
     stroke-width="10" />
   <rect width="100" height="100" fill="blue" x="50" y="200" />
+  <g id="paths">
+    <path ng-repeat="path in paths" ng-attr-d="{{pathData(path)}}" />
+  </g>
+  <g id="current-path">
+    <polyline ng-attr-points="{{polylineData(currentPath)}}" fill="none"
+      stroke="lightseagreen"
+      stroke-width="2" />
+    <circle ng-repeat="point in currentPath"
+      ng-attr-cx="{{point.x}}" ng-attr-cy="{{point.y}}" fill="black" r="2" />
+  </g>
 </svg>
 
 <div id="toggle-draw" class="toggle-draw">
@@ -114,10 +124,13 @@ app.directive('whiteboard', function($window) {
     
     // viewbox origin in svg coordinates
     var origin = new Point(0, 0);
+
     // mousedown device coordinates
     var down_dev = null;
     // mousedown svg coordinates
-    var down_svg
+    var down_svg = null;
+    // origin in svg coordinates on mousedown
+    var down_ori = null;
 
     var parent = element.parent()[0];
     function setDimensions() {
@@ -132,19 +145,30 @@ app.directive('whiteboard', function($window) {
     });
     element.bind('mousedown', function($event) {
       down_dev = new Point($event);
-      down_svg = new Point(origin);
+      down_ori = new Point(origin);
+      down_svg = new Point(down_dev).add(down_ori);
+      if (scope.draw) {
+        scope.currentPath.push(new Point(down_svg));
+      }
     });
     element.bind('mousemove', function($event) {
       if (down_dev && !scope.draw) {
         var p = new Point($event);
-        var o = new Point(down_svg);
+        var o = new Point(down_ori);
         origin = o.sub(p.sub(down_dev));
         setDimensions();
+      } else if (down_dev && scope.draw) {
+        var p = new Point($event);
+        scope.currentPath.push(p.add(origin));
+        scope.$digest();
       }
     });
     element.bind('mouseup', function($event) {
       down_dev = null;
       down_svg = null;
+      down_ori = null;
+      scope.currentPath = [];
+      scope.$digest();
     });
     setDimensions();
   };
@@ -154,9 +178,28 @@ app.directive('whiteboard', function($window) {
 });
 
 app.controller('whiteboard', function($scope, $window) {
+
+  $scope.polylineData = function(path) {
+    return path.map(function(p) {
+      return p.x + ' ' + p.y;
+    }).join(' ');
+  };
+
+  $scope.pathData = function(path) {
+    var ret = '';
+    if (path.length < 1)
+      return ret;
+    ret += 'M ' + path[0].x + ' ' + path[0].y + ' ';
+    for (var i = 1; i < path.length; ++i) {
+      ret += 'L ' + path[i].x + ' ' + path[i].y + ' ';
+    }
+    ret += 'z';
+    return ret;
+  };
+
   $scope.draw = false;
-  $scope.paths = [
-  ];
+  $scope.paths = [];
+  $scope.currentPath = [];
 
   $scope.mousedown = function($event) {
   };
