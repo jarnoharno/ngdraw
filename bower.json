@@ -1,0 +1,19 @@
+{
+  "name": "ngdraw",
+  "version": "0.0.1",
+  "homepage": "https://github.com/jlep/ngdraw",
+  "authors": [
+    "Jarno Leppänen <jarno.leppanen@iki.fi>"
+  ],
+  "license": "ISC",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "css-toggle-switch": "~2.1.5"
+  }
+}
