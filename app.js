@@ -1,6 +1,11 @@
 var express     = require('express');
 var path        = require('path');
 
+// extend mime charsets check
+express.static.mime.charsets.lookup = function(mimeType) {
+  return (/^(text|application)\//).test(mimeType) ? 'UTF-8' : '';
+};
+
 var public_path = '/public';
 var app = express();
 app.set('port', process.env.PORT || 80);
