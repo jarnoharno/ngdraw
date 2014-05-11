@@ -63,11 +63,10 @@ div, svg {
 <body>
 <div id="view" ng-app="ngdraw" ng-controller="whiteboard">
 <svg id="whiteboard" whiteboard>
-  <rect width="100" height="100" fill="red" x="50" y="50" stroke="black"
-    stroke-width="10" />
-  <rect width="100" height="100" fill="blue" x="50" y="200" />
   <g id="paths">
-    <path ng-repeat="path in paths" ng-attr-d="{{pathData(path)}}" />
+    <path ng-repeat="path in paths" ng-attr-d="{{pathData(path)}}" fill="none"
+      stroke="black" stroke-width="2" 
+    />
   </g>
   <g id="current-path">
     <polyline ng-attr-points="{{polylineData(currentPath)}}" fill="none"
@@ -91,7 +90,7 @@ div, svg {
 </div>
 
 <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.3.0-beta.5/angular.min.js"></script>
-<script src="//ajax.googleapis.com/ajax/libs/angularjs/1.3.0-beta.5/angular-route.min.js"></script>
+<script src="public/js/bfit.js"></script>
 
 <script>
 var app = angular.module('ngdraw', []);
@@ -164,10 +163,13 @@ app.directive('whiteboard', function($window) {
       }
     });
     element.bind('mouseup', function($event) {
+      if (scope.draw) {
+        scope.paths.push(FitCurveArray(scope.currentPath, 40.0));
+        scope.currentPath = [];
+      }
       down_dev = null;
       down_svg = null;
       down_ori = null;
-      scope.currentPath = [];
       scope.$digest();
     });
     setDimensions();
@@ -189,11 +191,13 @@ app.controller('whiteboard', function($scope, $window) {
     var ret = '';
     if (path.length < 1)
       return ret;
-    ret += 'M ' + path[0].x + ' ' + path[0].y + ' ';
-    for (var i = 1; i < path.length; ++i) {
-      ret += 'L ' + path[i].x + ' ' + path[i].y + ' ';
+    ret += 'M ' + path[0][0].x + ' ' + path[0][0].y;
+    for (var i = 0; i < path.length; ++i) {
+      ret += ' C ' + 
+        path[i][1].x + ' ' + path[i][1].y + ' ' +
+        path[i][2].x + ' ' + path[i][2].y + ' ' +
+        path[i][3].x + ' ' + path[i][3].y ;
     }
-    ret += 'z';
     return ret;
   };
 
