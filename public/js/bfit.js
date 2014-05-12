@@ -123,6 +123,9 @@ function FitCurve(d, error, DrawBezierCurve)
 //    Vector2  *d;         /*  Array of digitized points  */
 //    double  error;      /*  User-defined error squared  */
 {
+  if (d.length < 2)
+    return;
+
   var tHat1, tHat2;       /*  Unit tangent vectors at endpoints */
   var nPts = d.length;
 

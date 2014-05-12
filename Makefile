@@ -8,10 +8,10 @@ ALL := $(TOGGLE_SWITCH) $(NODEDIR)
 .PHONY: all
 all: $(ALL)
 
-$(NODEDIR): package.json
+$(NODEDIR):
 	npm install
 
-$(BOWERDIR): bower.json
+$(BOWERDIR):
 	bower install
 
 $(DISTDIR):

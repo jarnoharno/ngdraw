@@ -1,5 +1,9 @@
 var app = angular.module('ngdraw', ['ngAnimate']);
 
+app.config(function($locationProvider) {
+  $locationProvider.html5Mode(true).hashPrefix('!');
+});
+
 function Point(x, y) {
   if (x instanceof MouseEvent) {
     this.x = x.offsetX;
@@ -23,7 +27,7 @@ Point.prototype.add = function(p) {
   return this;
 };
 
-app.directive('whiteboard', function($window) {
+app.directive('whiteboard', function($window, sockjs) {
   function link(scope, element, attrs) {
     
     // viewbox origin in svg coordinates
@@ -47,7 +51,17 @@ app.directive('whiteboard', function($window) {
     angular.element($window).bind('resize', function() {
       setDimensions();
     });
+    function reset() {
+      scope.currentPath = [];
+      down_dev = null;
+      down_svg = null;
+      down_ori = null;
+    }
     element.bind('mousedown', function($event) {
+      // mousedown may be called twice if cursor goes out of div
+      // this needs to be fixed!
+      if (down_dev)
+        reset();
       down_dev = new Point($event);
       down_ori = new Point(origin);
       down_svg = new Point(down_dev).add(down_ori);
@@ -62,19 +76,23 @@ app.directive('whiteboard', function($window) {
         origin = o.sub(p.sub(down_dev));
         setDimensions();
       } else if (down_dev && scope.draw) {
-        var p = new Point($event);
-        scope.currentPath.push(p.add(origin));
+        var cp = scope.currentPath;
+        var p = new Point($event).add(origin);
+        if (p.x == cp[cp.length-1].x && p.y == cp[cp.length-1].y)
+          return;
+        scope.currentPath.push(p);
         scope.$digest();
       }
     });
     element.bind('mouseup', function($event) {
-      if (scope.draw) {
-        scope.paths.push(FitCurveArray(scope.currentPath, 40.0));
-        scope.currentPath = [];
+      if (scope.draw && scope.currentPath.length > 1) {
+        // fit bezier
+        var path = FitCurveArray(scope.currentPath, 40.0);
+        scope.paths.push(path);
+        // send path to server
+        sockjs.sendPath(path);
       }
-      down_dev = null;
-      down_svg = null;
-      down_ori = null;
+      reset();
       scope.$digest();
     });
     setDimensions();
@@ -84,7 +102,7 @@ app.directive('whiteboard', function($window) {
   };
 });
 
-app.controller('whiteboard', function($scope, $window) {
+app.controller('whiteboard', function($scope, $window, sockjs) {
 
   $scope.polylineData = function(path) {
     return path.map(function(p) {
@@ -108,17 +126,47 @@ app.controller('whiteboard', function($scope, $window) {
 
   $scope.draw = false;
   $scope.showHandles = false;
-  $scope.paths = [];
+  $scope.paths = sockjs.paths;
   $scope.currentPath = [];
+});
 
-  $scope.mousedown = function($event) {
+app.service('sockjs', function($location, $rootScope) {
+  var connection = new SockJS('/sockjs');
+  var paths = [];
+  connection.onopen = function() {
+    connection.send(JSON.stringify({
+      type: 'open',
+      name: $location.path()
+    }));
   };
-  $scope.mouseup = function($event) {
-    $scope.downat = null;
-  };
-  $scope.mousemove = function($event) {
-    
-  };
-  $scope.toggleDraw = function() {
+  connection.onmessage = function(e) {
+    var msg = JSON.parse(e.data);
+    switch (msg.type) {
+      case 'paths':
+        // we want to keep the original reference so...
+        Array.prototype.splice.bind(paths, 0, paths.length).
+          apply(undefined, msg.paths);
+        // so much for that angular magic
+        $rootScope.$digest();
+        break;
+      case 'add_path':
+        paths.push(msg.path);
+        // ditto
+        $rootScope.$digest();
+        break;
+    }
+  }
+  return {
+    sendPath: function(path) {
+      // for now, ignore if not connected
+      if (connection.readyState !== SockJS.OPEN)
+        return;
+      connection.send(JSON.stringify({
+        type: 'add_path',
+        path: path
+      }));
+    },
+    // we can hook up on to this
+    paths: paths
   };
 });
