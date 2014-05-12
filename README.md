@@ -17,7 +17,7 @@ and sent to the server with [SockJS](https://github.com/sockjs/).
 
 ## Development
 
-    make run
+    $ make run
 
 ## Links
 
@@ -30,3 +30,7 @@ and sent to the server with [SockJS](https://github.com/sockjs/).
 * [SVG + AngularJS](http://alexandros.resin.io/angular-d3-svg/)
 * [Paper.js examples](http://paperjs.org/examples/path-simplification/) (uses canvas)
 * [Piecewise Bézier curve fitting](http://iut-arles.univ-provence.fr/web/romain-raffin/sites/romain-raffin/IMG/pdf/PSchndeider_An_Algorithm_for_automatically_fitting_digitized_curves.pdf)
+
+## License
+
+[ISC](http://en.wikipedia.org/wiki/ISC_license)
